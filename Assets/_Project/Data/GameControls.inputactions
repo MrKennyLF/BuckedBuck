@@ -1,0 +1,55 @@
+{
+    "version": 1,
+    "name": "GameControls",
+    "maps": [
+        {
+            "name": "Player",
+            "id": "60e1228f-990e-47e9-84c7-f34c007d5b6e",
+            "actions": [
+                {
+                    "name": "ShootDealer",
+                    "type": "Button",
+                    "id": "ba476cdb-4d75-4c6b-adf4-47d5310464a3",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ShootSelf",
+                    "type": "Button",
+                    "id": "1a8f7499-c448-44ec-9104-c3254b3753e6",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "5a01e3f9-d6d1-4cc6-911e-fcb36b6784fc",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ShootDealer",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f81e3925-9347-4839-82ea-0d2ae20f53db",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ShootSelf",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
