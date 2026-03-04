@@ -1,29 +1,34 @@
+using System;
 using System.Collections.Generic;
 
 namespace Project.Core
 {
-    // 1. Enums globales
     public enum Target { None, Player, Dealer }
     public enum TurnOwner { None, Player, Dealer }
 
     public class GameContext
     {
-        // 2. Escopeta (Encapsulada)
+        // Escopeta
         private List<bool> _shotgunChamber = new List<bool>();
         public IReadOnlyList<bool> ShotgunChamber => _shotgunChamber;
 
-        // 3. Inventarios (La lógica que diseñaste, encapsulada)
+        // Inventarios
         private List<IItem> _playerInventory = new List<IItem>();
         private List<IItem> _dealerInventory = new List<IItem>();
 
         public IReadOnlyList<IItem> PlayerInventory => _playerInventory;
         public IReadOnlyList<IItem> DealerInventory => _dealerInventory;
 
-        // 4. Variables de estado de la partida
+        // Variables de estado
         public int PlayerHealth { get; set; }
         public int DealerHealth { get; set; }
         public Target CurrentTarget { get; set; }
         public TurnOwner CurrentTurnOwner { get; set; }
+
+        // Eventos Reactivos
+        public event Action<TurnOwner, IItem> OnItemAdded;
+        public event Action<TurnOwner, IItem> OnItemConsumed;
+        public event Action<string, bool, Action> OnItemAnimationRequested;
 
         public GameContext()
         {
@@ -44,7 +49,7 @@ namespace Project.Core
             if (_shotgunChamber.Count == 0) return false;
 
             bool round = _shotgunChamber[0];
-            _shotgunChamber.RemoveAt(0); // Esto muta la lista interna, es legal aquí.
+            _shotgunChamber.RemoveAt(0);
             return round;
         }
 
@@ -60,17 +65,33 @@ namespace Project.Core
             int maxInventorySize = 8;
 
             if (owner == TurnOwner.Player && _playerInventory.Count < maxInventorySize)
+            {
                 _playerInventory.Add(item);
+                OnItemAdded?.Invoke(owner, item);
+            }
             else if (owner == TurnOwner.Dealer && _dealerInventory.Count < maxInventorySize)
+            {
                 _dealerInventory.Add(item);
+                OnItemAdded?.Invoke(owner, item);
+            }
         }
 
         public void ConsumeItem(TurnOwner owner, IItem item)
         {
-            if (owner == TurnOwner.Player)
-                _playerInventory.Remove(item);
-            else if (owner == TurnOwner.Dealer)
-                _dealerInventory.Remove(item);
+            if (owner == TurnOwner.Player && _playerInventory.Remove(item))
+            {
+                OnItemConsumed?.Invoke(owner, item);
+            }
+            else if (owner == TurnOwner.Dealer && _dealerInventory.Remove(item))
+            {
+                OnItemConsumed?.Invoke(owner, item);
+            }
+        }
+
+        // --- PUENTE ASÍNCRONO ---
+        public void RequestItemAnimation(string itemId, bool extraData, Action onComplete)
+        {
+            OnItemAnimationRequested?.Invoke(itemId, extraData, onComplete);
         }
     }
 }

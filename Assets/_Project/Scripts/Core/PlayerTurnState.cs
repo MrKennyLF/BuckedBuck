@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 
 namespace Project.Core
@@ -71,6 +72,17 @@ namespace Project.Core
 
             // Pasamos el contexto y el Callback que reactivará los controles
             magnifier.Use(_context, EnableInput);
+        }
+        private void HandleItemUseRequested(IItem itemInstance)
+        {
+            // Validamos por seguridad que el jugador realmente posea esta instancia exacta
+            // (Contains compara por referencia en memoria, es exacto y O(N) seguro para listas de 8 items)
+            if (!_context.PlayerInventory.Contains(itemInstance)) return;
+
+            DisableInput();
+
+            // Aquí el IItem se encarga de aplicar su efecto y llamar al callback
+            itemInstance.Use(_context, EnableInput);
         }
     }
 }

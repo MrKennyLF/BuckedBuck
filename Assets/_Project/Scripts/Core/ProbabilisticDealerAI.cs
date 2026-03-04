@@ -1,4 +1,5 @@
-using System.Linq;
+using System;
+using System.Linq; // Necesario para contar la lista rápido
 using UnityEngine;
 
 namespace Project.Core
@@ -7,39 +8,29 @@ namespace Project.Core
     {
         public Target DecideTarget(GameContext context)
         {
+            // 1. El Dealer lee la mente de la escopeta (sabe cuántas quedan, pero no el orden)
             int totalRounds = context.ShotgunChamber.Count;
-            if (totalRounds == 0) return Target.None;
 
-            // La IA lee la recámara. En un diseño estricto de seguridad, la IA no debería tener
-            // acceso directo a la lista para evitar que haga "trampas" (modificando las balas),
-            // pero por ahora usaremos LINQ para contar.
-            int liveRounds = context.ShotgunChamber.Count(isLive => isLive);
+            // Si por alguna razón no hay balas, falla seguro al jugador
+            if (totalRounds == 0) return Target.Player;
+
+            int liveRounds = context.ShotgunChamber.Count(bullet => bullet == true);
             int blankRounds = totalRounds - liveRounds;
 
-            // Casos absolutos (Inteligencia 100%)
-            if (liveRounds == 0)
+            Debug.Log($"[IA Dealer] Calculando probabilidades... Vivas: {liveRounds}, Fogueo: {blankRounds}");
+
+            // 2. La lógica de supervivencia
+            if (blankRounds > liveRounds)
             {
-                Debug.Log("[Dealer AI] 100% Fogueo. Me disparo a mí mismo para turno extra.");
+                // Si la probabilidad dice que es fogueo, se dispara a sí mismo para robarte el turno
+                Debug.Log("[IA Dealer] Mayor probabilidad de fogueo. Apuntando a: MÍ MISMO.");
                 return Target.Dealer;
-            }
-            if (blankRounds == 0)
-            {
-                Debug.Log("[Dealer AI] 100% Bala viva. Disparo al jugador.");
-                return Target.Player;
-            }
-
-            // Probabilidad
-            float liveProbability = (float)liveRounds / totalRounds;
-
-            if (liveProbability >= 0.5f)
-            {
-                Debug.Log($"[Dealer AI] Probabilidad de viva ({liveProbability * 100}%). Disparo al jugador.");
-                return Target.Player;
             }
             else
             {
-                Debug.Log($"[Dealer AI] Probabilidad de fogueo alta. Me arriesgo por el turno extra.");
-                return Target.Dealer;
+                // Si hay más balas vivas, o están empatadas (50/50), es agresivo y te dispara a ti
+                Debug.Log("[IA Dealer] Mayor o igual probabilidad de daño. Apuntando a: JUGADOR.");
+                return Target.Player;
             }
         }
     }

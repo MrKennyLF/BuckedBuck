@@ -12,7 +12,11 @@ namespace Project.Core
         // Eventos nativos de C# a los que la FSM se suscribirá
         public event Action OnShootDealer;
         public event Action OnShootSelf;
-
+        public event Action<IItem> OnItemUseRequested;
+        public void RaiseItemUseInput(IItem itemInstance)
+        {
+            OnItemUseRequested?.Invoke(itemInstance);
+        }
         private void OnEnable()
         {
             if (_controls == null)

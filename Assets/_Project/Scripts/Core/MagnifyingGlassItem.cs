@@ -5,6 +5,7 @@ namespace Project.Core
 {
     public class MagnifyingGlassItem : IItem
     {
+        public string Id => "item_magnifier";
         public string Name => "Magnifying Glass";
 
         // Evento que escuchará la UI o el VisualController para mostrar el cartucho
@@ -17,6 +18,7 @@ namespace Project.Core
                 bool isLive = context.PeekNextRound();
                 Debug.Log($"[Item] Lupa usada. El cartucho es {(isLive ? "REAL" : "FOGUEO")}.");
 
+                context.RequestItemAnimation(this.Id, isLive, onComplete);
                 // Avisamos a la capa visual
                 OnRoundRevealed?.Invoke(isLive);
             }

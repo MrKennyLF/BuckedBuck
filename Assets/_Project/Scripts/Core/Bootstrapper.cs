@@ -40,7 +40,7 @@ namespace Project.Core
             // Memoria y Cerebro (C# Puro)
             GameContext context = new GameContext();
             _stateMachine = new TurnStateMachine();
-
+            context.OnItemAnimationRequested += visualController.PlayItemAnimation;
             // Estrategias (Reglas e IA)
             ITurnRuleEvaluator ruleEvaluator = new BuckshotRules();
             IDealerAI dealerAI = new ProbabilisticDealerAI();
@@ -58,6 +58,8 @@ namespace Project.Core
                 visualController.AnimateShot(target, isLive, resolutionState.CompleteVisualResolution);
 
             dealerState.OnDealerThinking += visualController.SimulateDealerThinking;
+
+            context.OnItemAdded += visualController.HandleItemAdded;
 
             // 3. Registramos los estados en la Máquina de Estados
             _stateMachine.AddState(setupState);

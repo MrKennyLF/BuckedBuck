@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76f8b1d805216e84aa6e73215e022398, type: 3}
+  m_Name: New Item Visual Catalog
+  m_EditorClassIdentifier: Assembly-CSharp::ItemVisualCatalog
+  items:
+  - id: item_magnifier
+    prefab: {fileID: 4713088400675762615, guid: cc3ffdd62b643a745954eeb2443335dd, type: 3}
+  - id: item_cigarette
+    prefab: {fileID: 478047748454475443, guid: 6d2ce9a6c340a544ba7017ff5c654658, type: 3}

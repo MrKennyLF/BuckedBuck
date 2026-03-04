@@ -8,7 +8,7 @@ namespace Project.Core
         private readonly Func<IItem>[] _availableItems = new Func<IItem>[]
         {
             () => new MagnifyingGlassItem(),
-            // () => new CigaretteItem(),
+            () => new CigaretteItem(),
             // () => new HandcuffsItem()
         };
 
