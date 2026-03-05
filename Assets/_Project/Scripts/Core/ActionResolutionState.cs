@@ -1,18 +1,14 @@
 using System;
 using UnityEngine;
+using Object = UnityEngine.Object; // Necesario para buscar la vista rápido
 
 namespace Project.Core
 {
     public class ActionResolutionState : IGameState
     {
-        private TurnStateMachine _stateMachine;
-        private GameContext _context;
-        private ITurnRuleEvaluator _ruleEvaluator;
-
-        private bool _lastShotWasLive;
-
-        // Evento que notifica a la capa visual qué ocurrió, pasando el objetivo y si la bala era real
-        public event Action<Target, bool> OnShotFired;
+        private readonly TurnStateMachine _stateMachine;
+        private readonly GameContext _context;
+        private readonly ITurnRuleEvaluator _ruleEvaluator;
 
         public ActionResolutionState(TurnStateMachine stateMachine, GameContext context, ITurnRuleEvaluator ruleEvaluator)
         {
@@ -23,56 +19,54 @@ namespace Project.Core
 
         public void Enter()
         {
-            ResolveShot();
+            Debug.Log("<color=yellow>--- RESOLVIENDO DISPARO ---</color>");
+            Execute();
         }
 
-        public void Execute() { }
-
-        public void Exit()
+        public void Execute()
         {
-            // Limpiamos la intención del turno saliente para evitar datos fantasma
-            _context.CurrentTarget = Target.None;
-            _context.CurrentTurnOwner = TurnOwner.None;
-        }
+            // 1. Extraemos la siguiente bala de la escopeta
+            bool isLive = _context.ExtractNextRound();
+            Target target = _context.CurrentTarget;
 
-        private void ResolveShot()
-        {
-            // Medida de seguridad: Si no hay balas, salimos
-            if (_context.ShotgunChamber.Count == 0) return;
+            string tipoBala = isLive ? "VIVA (Roja)" : "FOGUEO (Azul)";
+            Debug.Log($"[Resolución] ¡PUM! Disparo al {target} con bala de {tipoBala}.");
 
-            // 1. Extraemos la bala usando el método seguro (Mutación controlada)
-            _lastShotWasLive = _context.ExtractNextRound();
-
-            // 2. Aplicamos daño matemático
-            if (_lastShotWasLive)
+            // 2. Si es bala viva, aplicamos el daño
+            if (isLive)
             {
-                if (_context.CurrentTarget == Target.Player) _context.PlayerHealth--;
-                if (_context.CurrentTarget == Target.Dealer) _context.DealerHealth--;
+                int damage = _context.CurrentDamageMultiplier;
+                if (target == Target.Player) _context.PlayerHealth -= damage;
+                else if (target == Target.Dealer) _context.DealerHealth -= damage;
             }
 
-            Debug.Log($"[Resolución] Disparo a {_context.CurrentTarget}. Bala viva: {_lastShotWasLive}. Salud Jugador: {_context.PlayerHealth}, Salud Dealer: {_context.DealerHealth}");
+            // Reseteamos siempre el cañón de la escopeta a la normalidad después de apretar el gatillo
+            _context.CurrentDamageMultiplier = 1;
 
-            // 3. Disparamos el evento a la vista (VisualController) para que haga las animaciones
-            OnShotFired?.Invoke(_context.CurrentTarget, _lastShotWasLive);
+            // 3. Consultamos el reglamento para saber de quién es el siguiente turno
+            Type nextState = _ruleEvaluator.EvaluateNextTurn(_context, isLive);
 
-            // La ejecución lógica se detiene aquí. 
-            // La máquina de estados queda en pausa esperando el Callback de Unity.
-        }
-
-        // Este método es el Callback. Será invocado por la capa visual cuando termine su espectáculo.
-        public void CompleteVisualResolution()
-        {
-            // Delegamos la decisión algorítmica a nuestra Estrategia Inyectada (BuckshotRules)
-            Type nextState = _ruleEvaluator.EvaluateNextTurn(_context, _lastShotWasLive);
-
-            if (nextState != null)
+            // 4. Disparamos la animación visual
+            var visual = Object.FindFirstObjectByType<Project.Visuals.VisualController>();
+            if (visual != null)
             {
-                _stateMachine.ChangeState(nextState);
+                // La vista hace la pausa dramática y luego nos dice "ya puedes continuar"
+                visual.AnimateShot(target, isLive, () =>
+                {
+                    if (nextState != null) _stateMachine.ChangeState(nextState);
+                });
             }
             else
             {
-                Debug.LogWarning("[Sistema] Fin del juego o estado nulo evaluado.");
+                // Fallback por si acaso
+                if (nextState != null) _stateMachine.ChangeState(nextState);
             }
+        }
+
+        public void Exit()
+        {
+            // Limpiamos la mira para la próxima jugada
+            _context.CurrentTarget = Target.None;
         }
     }
 }

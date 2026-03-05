@@ -16,4 +16,8 @@ MonoBehaviour:
   - id: item_magnifier
     prefab: {fileID: 4713088400675762615, guid: cc3ffdd62b643a745954eeb2443335dd, type: 3}
   - id: item_cigarette
-    prefab: {fileID: 478047748454475443, guid: 6d2ce9a6c340a544ba7017ff5c654658, type: 3}
+    prefab: {fileID: 335702896886804319, guid: 80d179fda4def6449a17ee333443ae84, type: 3}
+  - id: item_beer
+    prefab: {fileID: 8421250709162546363, guid: 1647fb6ef720d1041bef857b558223a7, type: 3}
+  - id: item_handsaw
+    prefab: {fileID: 4589626166656124550, guid: 3282a7692c8d1d1429b410a2774691a0, type: 3}

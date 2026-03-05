@@ -1,36 +1,35 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem; // <-- Añadimos la librería nueva
 
 namespace Project.Core
 {
     public class InputReader : MonoBehaviour
     {
-        private GameControls _controls;
-
-        public Action OnUseItem { get; internal set; }
-
-        // Eventos nativos de C# a los que la FSM se suscribirá
-        public event Action OnShootDealer;
-        public event Action OnShootSelf;
         public event Action<IItem> OnItemUseRequested;
+        public event Action<Target> OnShootRequested;
+
         public void RaiseItemUseInput(IItem itemInstance)
         {
             OnItemUseRequested?.Invoke(itemInstance);
         }
-        private void OnEnable()
-        {
-            if (_controls == null)
-            {
-                _controls = new GameControls();
-                _controls.Player.ShootDealer.performed += ctx => OnShootDealer?.Invoke();
-                _controls.Player.ShootSelf.performed += ctx => OnShootSelf?.Invoke();
-            }
-            _controls.Enable();
-        }
 
-        private void OnDisable()
+        private void Update()
         {
-            _controls.Disable();
+            // Verificamos que haya un teclado conectado para evitar errores
+            if (Keyboard.current == null) return;
+
+            // Usamos la sintaxis del Nuevo Input System
+            if (Keyboard.current.wKey.wasPressedThisFrame)
+            {
+                Debug.Log("[Input] Tecla W presionada: Disparar al Dealer");
+                OnShootRequested?.Invoke(Target.Dealer);
+            }
+            else if (Keyboard.current.sKey.wasPressedThisFrame)
+            {
+                Debug.Log("[Input] Tecla S presionada: Disparar a Mí Mismo");
+                OnShootRequested?.Invoke(Target.Player);
+            }
         }
     }
 }

@@ -1,14 +1,16 @@
 using System;
-using System.Linq;
 using UnityEngine;
 
 namespace Project.Core
 {
     public class PlayerTurnState : IGameState
     {
-        private TurnStateMachine _stateMachine;
-        private GameContext _context;
-        private InputReader _inputReader;
+        private readonly TurnStateMachine _stateMachine;
+        private readonly GameContext _context;
+        private readonly InputReader _inputReader;
+
+        // Bloqueo temporal para no hacer spam de clics mientras ocurre una animación
+        private bool _isAnimating = false;
 
         public PlayerTurnState(TurnStateMachine stateMachine, GameContext context, InputReader inputReader)
         {
@@ -19,70 +21,74 @@ namespace Project.Core
 
         public void Enter()
         {
-            Debug.Log("[Estado] Turno del Jugador.");
+            Debug.Log("<color=cyan>--- TURNO DEL JUGADOR ---</color>");
             _context.CurrentTurnOwner = TurnOwner.Player;
-            EnableInput();
+            _isAnimating = false;
+
+            // Nos suscribimos a disparos Y a clics de objetos
+            _inputReader.OnShootRequested += HandleShoot;
+            _inputReader.OnItemUseRequested += HandleItemUse;
         }
 
-        public void Execute() { }
+        public void Execute()
+        {
+            // Vacio porque esperamos los eventos de InputReader
+        }
 
         public void Exit()
         {
-            DisableInput();
+            _inputReader.OnShootRequested -= HandleShoot;
+            _inputReader.OnItemUseRequested -= HandleItemUse;
         }
 
-        // Centralizamos la suscripción
-        private void EnableInput()
+        private void HandleShoot(Target target)
         {
-            _inputReader.OnShootDealer += HandleShootDealer;
-            _inputReader.OnShootSelf += HandleShootSelf;
-            _inputReader.OnUseItem += HandleUseItem; // Nuevo evento hipotético
-        }
+            if (_isAnimating) return; // Si estás en medio de una animación, no puedes disparar
 
-        // Centralizamos la desuscripción
-        private void DisableInput()
-        {
-            _inputReader.OnShootDealer -= HandleShootDealer;
-            _inputReader.OnShootSelf -= HandleShootSelf;
-            _inputReader.OnUseItem -= HandleUseItem;
-        }
-
-        private void HandleShootDealer()
-        {
-            DisableInput(); // Apagamos controles inmediatamente
-            _context.CurrentTarget = Target.Dealer;
+            Debug.Log($"[Estado Jugador] Decisión tomada: Disparar a {target}");
+            _context.CurrentTarget = target;
             _stateMachine.ChangeState(typeof(ActionResolutionState));
         }
 
-        private void HandleShootSelf()
+        private void HandleItemUse(IItem item)
         {
-            DisableInput(); // Apagamos controles inmediatamente
-            _context.CurrentTarget = Target.Player;
-            _stateMachine.ChangeState(typeof(ActionResolutionState));
-        }
+            if (_isAnimating) return;
 
-        private void HandleUseItem()
-        {
-            DisableInput(); // El jugador ya no puede disparar ni usar otro objeto
+            // Validamos que el objeto realmente esté en nuestro lado de la mesa
+            bool isMyItem = false;
+            foreach (var i in _context.PlayerInventory)
+            {
+                if (i == item) isMyItem = true;
+            }
 
-            // Lógica temporal para probar la Lupa
-            IItem magnifier = new MagnifyingGlassItem();
+            if (!isMyItem)
+            {
+                Debug.LogWarning("[Estado Jugador] No puedes usar un objeto que no es tuyo.");
+                return;
+            }
 
-            Debug.Log($"[Acción] Usando {magnifier.Name}...");
+            Debug.Log($"[Estado Jugador] Usando: {item.Name}");
+            _isAnimating = true;
 
-            // Pasamos el contexto y el Callback que reactivará los controles
-            magnifier.Use(_context, EnableInput);
-        }
-        private void HandleItemUseRequested(IItem itemInstance)
-        {
-            // Validamos por seguridad que el jugador realmente posea esta instancia exacta
-            // (Contains compara por referencia en memoria, es exacto y O(N) seguro para listas de 8 items)
-            if (!_context.PlayerInventory.Contains(itemInstance)) return;
+            // 1. Lo borramos del inventario
+            _context.ConsumeItem(TurnOwner.Player, item);
 
-            DisableInput();
+            // 2. Ejecutamos el objeto y evaluamos si perdemos el turno
+            item.Use(_context, () =>
+            {
+                _isAnimating = false;
 
-            // Aquí el IItem se encarga de aplicar su efecto y llamar al callback
-            itemInstance.Use(_context, EnableInput);
+                // REGLA: Solo el cigarro (curación) te quita el turno para evitar la inmortalidad
+                if (item.Id == "item_cigarette")
+                {
+                    Debug.Log($"<color=orange>[Estado Jugador] Usar {item.Name} consumió tu turno. Pasa al Dealer.</color>");
+                    _stateMachine.ChangeState(typeof(DealerTurnState));
+                }
+                else
+                {
+                    Debug.Log($"[Estado Jugador] Acción rápida. Terminaste de usar {item.Name}. Aún es tu turno.");
+                }
+            });
         }
     }
 }

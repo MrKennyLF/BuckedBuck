@@ -19,35 +19,66 @@ namespace Project.Core
         public IReadOnlyList<IItem> PlayerInventory => _playerInventory;
         public IReadOnlyList<IItem> DealerInventory => _dealerInventory;
 
-        // Variables de estado
-        public int PlayerHealth { get; set; }
-        public int DealerHealth { get; set; }
+        // Variables de estado generales
         public Target CurrentTarget { get; set; }
         public TurnOwner CurrentTurnOwner { get; set; }
 
-        // Eventos Reactivos
+        // Multiplicador de daño (Para la Sierra)
+        public int CurrentDamageMultiplier { get; set; } = 1;
+
+        // --- EVENTOS REACTIVOS ---
         public event Action<TurnOwner, IItem> OnItemAdded;
         public event Action<TurnOwner, IItem> OnItemConsumed;
         public event Action<string, bool, Action> OnItemAnimationRequested;
 
+        public event Action<int, int> OnHealthChanged;
+        public event Action<int, int> OnChamberLoaded;
+
+        // NUEVO EVENTO: Para avisar a la UI del final del juego
+        public event Action<string> OnGameOver;
+
+        // --- PROPIEDADES REACTIVAS DE SALUD ---
+        private int _playerHealth = 4;
+        public int PlayerHealth
+        {
+            get => _playerHealth;
+            set
+            {
+                _playerHealth = value;
+                OnHealthChanged?.Invoke(_playerHealth, _dealerHealth);
+            }
+        }
+
+        private int _dealerHealth = 4;
+        public int DealerHealth
+        {
+            get => _dealerHealth;
+            set
+            {
+                _dealerHealth = value;
+                OnHealthChanged?.Invoke(_playerHealth, _dealerHealth);
+            }
+        }
+
         public GameContext()
         {
-            PlayerHealth = 4;
-            DealerHealth = 4;
             CurrentTarget = Target.None;
             CurrentTurnOwner = TurnOwner.None;
+            CurrentDamageMultiplier = 1;
         }
 
         // --- MÉTODOS DE ESCOPETA ---
         public void LoadChamber(List<bool> cartridges)
         {
             _shotgunChamber = cartridges;
+            int vivas = cartridges.FindAll(b => b == true).Count;
+            int fogueo = cartridges.Count - vivas;
+            OnChamberLoaded?.Invoke(vivas, fogueo);
         }
 
         public bool ExtractNextRound()
         {
             if (_shotgunChamber.Count == 0) return false;
-
             bool round = _shotgunChamber[0];
             _shotgunChamber.RemoveAt(0);
             return round;
@@ -63,7 +94,6 @@ namespace Project.Core
         public void AddItem(TurnOwner owner, IItem item)
         {
             int maxInventorySize = 8;
-
             if (owner == TurnOwner.Player && _playerInventory.Count < maxInventorySize)
             {
                 _playerInventory.Add(item);
@@ -88,10 +118,15 @@ namespace Project.Core
             }
         }
 
-        // --- PUENTE ASÍNCRONO ---
+        // --- PUENTES ASÍNCRONOS Y DE UI ---
         public void RequestItemAnimation(string itemId, bool extraData, Action onComplete)
         {
             OnItemAnimationRequested?.Invoke(itemId, extraData, onComplete);
+        }
+
+        public void TriggerGameOver(string winnerMessage)
+        {
+            OnGameOver?.Invoke(winnerMessage);
         }
     }
 }

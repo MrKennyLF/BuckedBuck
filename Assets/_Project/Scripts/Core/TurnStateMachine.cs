@@ -5,38 +5,33 @@ namespace Project.Core
 {
     public class TurnStateMachine
     {
-        private IGameState _currentState;
+        // Diccionario para guardar todos los estados que el Bootstrapper nos inyecte
         private Dictionary<Type, IGameState> _states = new Dictionary<Type, IGameState>();
+        private IGameState _currentState;
 
-        // Registramos los estados ya construidos con sus dependencias
         public void AddState(IGameState state)
         {
             _states[state.GetType()] = state;
         }
 
-        public void ChangeState<T>() where T : IGameState
+        public void ChangeState(Type stateType)
         {
-            if (!_states.ContainsKey(typeof(T))) return;
-
+            // 1. Salimos del estado actual si existe
             if (_currentState != null)
             {
                 _currentState.Exit();
             }
 
-            _currentState = _states[typeof(T)];
-            _currentState.Enter();
-        }
-        public void ChangeState(Type stateType)
-        {
-            if (stateType == null || !_states.ContainsKey(stateType)) return;
-
-            _currentState?.Exit();
-            _currentState = _states[stateType];
-            _currentState.Enter();
-        }
-        public void Update()
-        {
-            _currentState?.Execute();
+            // 2. Buscamos el nuevo estado y entramos
+            if (_states.TryGetValue(stateType, out IGameState nextState))
+            {
+                _currentState = nextState;
+                _currentState.Enter();
+            }
+            else
+            {
+                UnityEngine.Debug.LogError($"[StateMachine] Intento de cambiar a un estado no registrado: {stateType}");
+            }
         }
     }
 }

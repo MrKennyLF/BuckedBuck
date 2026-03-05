@@ -1,29 +1,28 @@
-using System;
 using UnityEngine;
-using Project.Core; // Necesario para conocer IItem
+using Project.Core;
 
 namespace Project.Visuals
 {
-    // Asegúrate de que tus Prefabs tengan un Collider 3D (ej. BoxCollider) para que el ratón los detecte
     public class InteractableItem : MonoBehaviour
     {
-        private IItem _logicalItem;
+        private IItem _itemData;
+        private InputReader _inputReader;
 
-        // Este evento avisará hacia "arriba" cuando el jugador haga clic en este modelo 3D
-        public event Action<IItem> OnItemClicked;
-
-        // El VisualController llama a esto al instanciar el prefab
-        public void Initialize(IItem item)
+        public void Initialize(IItem itemData)
         {
-            _logicalItem = item;
+            _itemData = itemData;
+            // Buscamos el puente de controles en la escena
+            _inputReader = FindFirstObjectByType<InputReader>();
         }
 
+        // Esta función de Unity se dispara sola al hacer clic en el objeto
+        // (Requiere que el objeto tenga un Collider, que los cubos/cilindros ya traen por defecto)
         private void OnMouseDown()
         {
-            if (_logicalItem != null)
+            if (_itemData != null && _inputReader != null)
             {
-                Debug.Log($"[Vista] Clic en el objeto visual de: {_logicalItem.Name}");
-                OnItemClicked?.Invoke(_logicalItem);
+                Debug.Log($"[Vista] Clic detectado en: {_itemData.Name}");
+                _inputReader.RaiseItemUseInput(_itemData);
             }
         }
     }

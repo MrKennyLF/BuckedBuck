@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Project.Core
 {
@@ -6,36 +7,32 @@ namespace Project.Core
     {
         public Type EvaluateNextTurn(GameContext context, bool wasLiveRound)
         {
-            // 1. Condición de fin de juego
+            // 1. REGLA DE MUERTE: ¿Alguien se quedó sin vida?
             if (context.PlayerHealth <= 0 || context.DealerHealth <= 0)
             {
-                // Devolvemos null temporalmente hasta que creemos el GameOverState
-                return null;
+                return typeof(GameOverState);
             }
 
-            // 2. Condición de recarga
+            // 2. REGLA DE RECARGA: ¿Se vació la escopeta?
             if (context.ShotgunChamber.Count == 0)
             {
-                return typeof(SetupRoundState);
+                Debug.Log("<color=yellow>[Reglas] Escopeta vacía. Volviendo a fase de preparación.</color>");
+                return typeof(SetupRoundState); // AQUÍ es el único lugar donde se reinician los objetos
             }
 
-            // 3. Reglas de retención de turno (La mecánica principal)
-            if (context.CurrentTurnOwner == TurnOwner.Player)
+            // 3. REGLA DE TURNOS: Si aún hay balas, decidimos quién sigue
+            Target selfTarget = context.CurrentTurnOwner == TurnOwner.Player ? Target.Player : Target.Dealer;
+
+            if (!wasLiveRound && context.CurrentTarget == selfTarget)
             {
-                if (context.CurrentTarget == Target.Player && !wasLiveRound)
-                    return typeof(PlayerTurnState); // Retiene turno
-
-                return typeof(DealerTurnState); // Pierde turno
-            }
-            else if (context.CurrentTurnOwner == TurnOwner.Dealer)
-            {
-                if (context.CurrentTarget == Target.Dealer && !wasLiveRound)
-                    return typeof(DealerTurnState); // Retiene turno
-
-                return typeof(PlayerTurnState); // Pierde turno
+                // Si te disparaste a ti mismo con fogueo, CONSERVAS TU TURNO
+                Debug.Log("[Reglas] Disparo de fogueo a sí mismo. El jugador conserva el turno.");
+                return context.CurrentTurnOwner == TurnOwner.Player ? typeof(PlayerTurnState) : typeof(DealerTurnState);
             }
 
-            return typeof(SetupRoundState); // Fallback de seguridad
+            // En cualquier otro caso (bala viva, o dispararle al rival), el turno cambia
+            Debug.Log("[Reglas] Cambio de turno.");
+            return context.CurrentTurnOwner == TurnOwner.Player ? typeof(DealerTurnState) : typeof(PlayerTurnState);
         }
     }
 }

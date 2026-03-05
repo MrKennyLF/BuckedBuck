@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,9 +6,9 @@ namespace Project.Core
 {
     public class SetupRoundState : IGameState
     {
-        private TurnStateMachine _stateMachine;
-        private GameContext _context;
-        private IItemFactory _itemFactory; // Nueva dependencia
+        private readonly TurnStateMachine _stateMachine;
+        private readonly GameContext _context;
+        private readonly IItemFactory _itemFactory;
 
         public SetupRoundState(TurnStateMachine stateMachine, GameContext context, IItemFactory itemFactory)
         {
@@ -18,34 +19,63 @@ namespace Project.Core
 
         public void Enter()
         {
-            Debug.Log("[Estado] Entrando a SetupRoundState");
-            GenerateCartridges();
-            DistributeItems(); // Nuevo paso
+            Debug.Log("<color=magenta>--- PREPARANDO NUEVA RONDA ---</color>");
+            Execute();
+        }
 
+        public void Execute()
+        {
+            // 1. Generamos una carga de balas totalmente aleatoria
+            List<bool> newChamber = GenerateRandomCartridges();
+            _context.LoadChamber(newChamber);
+
+            Debug.Log($"[Setup] Escopeta cargada con {newChamber.Count} balas.");
+
+            // 2. Repartimos solo 2 objetos por ronda a cada quien
+            // (Tu GameContext ya tiene la lógica de que el máximo es 8, así que no se desbordará)
+            _context.AddItem(TurnOwner.Player, _itemFactory.GetRandomItem());
+            _context.AddItem(TurnOwner.Player, _itemFactory.GetRandomItem());
+
+            _context.AddItem(TurnOwner.Dealer, _itemFactory.GetRandomItem());
+            _context.AddItem(TurnOwner.Dealer, _itemFactory.GetRandomItem());
+
+            // 3. El jugador siempre empieza cuando se recarga la escopeta
             _stateMachine.ChangeState(typeof(PlayerTurnState));
         }
 
-        public void Execute() { }
-        public void Exit() { }
-
-        private void GenerateCartridges()
+        // Algoritmo para generar y mezclar las balas
+        private List<bool> GenerateRandomCartridges()
         {
-            List<bool> newCartridges = new List<bool> { true, false, true }; // Hardcodeo temporal
-            _context.LoadChamber(newCartridges);
-        }
+            List<bool> cartridges = new List<bool>();
+            System.Random rng = new System.Random();
 
-        private void DistributeItems()
-        {
-            // Regla de Buckshot: Se reparten de 1 a 4 objetos por ronda
-            int itemsToDistribute = UnityEngine.Random.Range(1, 5);
+            // Generamos un total aleatorio de balas entre 2 y 6
+            int totalBullets = rng.Next(2, 7);
 
-            for (int i = 0; i < itemsToDistribute; i++)
+            // Aseguramos que al menos haya 1 viva y 1 fogueo para que sea divertido
+            cartridges.Add(true);
+            cartridges.Add(false);
+
+            // Rellenamos el resto al azar (true = viva, false = fogueo)
+            for (int i = 2; i < totalBullets; i++)
             {
-                _context.AddItem(TurnOwner.Player, _itemFactory.GetRandomItem());
-                _context.AddItem(TurnOwner.Dealer, _itemFactory.GetRandomItem());
+                cartridges.Add(rng.Next(2) == 0);
             }
 
-            Debug.Log($"[Sistema] Repartidos {itemsToDistribute} objetos a cada participante.");
+            // Mezclamos la lista como si fuera una baraja (Algoritmo Fisher-Yates)
+            int n = cartridges.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                bool value = cartridges[k];
+                cartridges[k] = cartridges[n];
+                cartridges[n] = value;
+            }
+
+            return cartridges;
         }
+
+        public void Exit() { }
     }
 }
